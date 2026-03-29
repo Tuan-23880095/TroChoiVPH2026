@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Truy Tìm Kho Báu Địa Chất</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --stone-color: #5d4037; /* Nâu đất sét */
+            --mineral-color: #e65100; /* Cam gạch */
+            --success-color: #8bc34a; /* Xanh lá mạ */
+            --error-color: #f44336; /* Đỏ lỗi */
+            --text-main: #333;
+            --white: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(#d7ccc8 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 900px;
+            height: 100vh;
+            max-height: 900px;
+            padding: 20px;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* --- SCREEN 1: LOGIN --- */
+        #login-screen {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--stone-color);
+            margin-bottom: 30px;
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 350px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--mineral-color);
+        }
+
+        button {
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 350px;
+        }
+
+        button:active {
+            transform: translateY(2px);
+        }
+
+        /* --- SCREEN 2: GAME --- */
+        #game-screen {
+            padding: 10px 15px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--stone-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .timer {
+            font-size: 24px;
+            color: #ffca28;
+        }
+
+        .game-area {
+            display: flex;
+            flex: 1;
+            gap: 15px;
+            flex-direction: row;
+            overflow: hidden;
+        }
+
+        .col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #e0e0e0;
+            padding: 10px;
+            border-radius: 10px;
+            overflow-y: auto;
+        }
+
+        .col-title {
+            text-align: center;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+            flex-shrink: 0;
+        }
+
+        /* Draggable Items */
+        .stone {
+            background-color: var(--white);
+            border: 2px solid var(--stone-color);
+            border-radius: 6px;
+            padding: 12px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60px;
+            transition: transform 0.2s;
+        }
+
+        .stone.dragging {
+            opacity: 0.9;
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+            cursor: grabbing;
+            border-color: var(--mineral-color);
+        }
+
+        /* Drop Zones */
+        .mineral-zone {
+            background-color: rgba(255, 204, 128, 0.3);
+            border: 2px dashed var(--mineral-color);
+            border-radius: 6px;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.3s;
+            padding: 5px;
+        }
+
+        .mineral-zone.drag-over {
+            background-color: rgba(255, 204, 128, 0.8);
+            border-style: solid;
+        }
+
+        .mineral-label {
+            position: absolute;
+            color: var(--mineral-color);
+            font-weight: bold;
+            font-size: 14px;
+            opacity: 0.7;
+            pointer-events: none;
+            text-align: center;
+            padding: 0 10px;
+            width: 100%;
+        }
+        
+        .mineral-zone:has(.stone) .mineral-label {
+            display: none;
+        }
+
+        /* Hiệu ứng ĐÚNG / SAI */
+        .success-flash {
+            background-color: #dcedc8 !important;
+            border: 2px solid var(--success-color) !important;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+
+        .shake {
+            animation: shake 0.4s ease-in-out;
+            border-color: var(--error-color) !important;
+            background-color: #ffcdd2 !important;
+        }
+
+        /* Pop-up Giải thích (Toast) */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            max-width: 80%;
+            background-color: #323232;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 2000;
+            left: 50%;
+            top: 20px; /* Hiển thị phía trên */
+            transform: translateX(-50%);
+            font-size: 14px;
+            line-height: 1.4;
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.3s, top 0.3s;
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            top: 40px;
+        }
+
+        #toast .title {
+            font-weight: bold;
+            color: var(--success-color);
+            margin-bottom: 5px;
+            display: block;
+            font-size: 16px;
+        }
+
+        .btn-submit {
+            margin-top: 15px;
+            background-color: #2196F3;
+            width: 100%;
+            max-width: 100%;
+            padding: 12px;
+        }
+
+        /* --- SCREEN 3: RESULT --- */
+        #result-screen {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            overflow-y: auto;
+        }
+
+        .result-box {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .score {
+            font-size: 40px;
+            color: var(--success-color);
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .time-taken {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .answer-key {
+            text-align: left;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .answer-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: #f1f8e9;
+            border-radius: 5px;
+            font-size: 14px;
+            border-left: 4px solid var(--success-color);
+        }
+
+        .loading-text {
+            color: var(--mineral-color);
+            font-style: italic;
+            margin-top: 15px;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 600px) {
+            .stone { font-size: 12px; min-height: 50px; padding: 8px 5px; }
+            .mineral-label { font-size: 12px; }
+            .mineral-zone { min-height: 60px; }
+            .answer-item { flex-direction: column; gap: 5px; }
+            .answer-item span { display: block; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- MÀN HÌNH 1: ĐĂNG NHẬP -->
+    <div id="login-screen" class="screen active">
+        <h1>Truy Tìm Kho Báu<br><small style="font-size: 18px; color: #666;">Giải Mã Đá Gốc</small></h1>
+        <div class="input-group">
+            <input type="text" id="studentName" placeholder="Họ và Tên của bạn" required>
+        </div>
+        <div class="input-group">
+            <input type="text" id="studentId" placeholder="Mã số Sinh viên" required>
+        </div>
+        <button id="btnStart">Bắt đầu khám phá</button>
+    </div>
+
+    <!-- MÀN HÌNH 2: CHƠI GAME -->
+    <div id="game-screen" class="screen">
+        <div class="header">
+            <div id="displayPlayerInfo">SV: ...</div>
+            <div class="timer" id="displayTimer">120s</div>
+        </div>
+
+        <div class="game-area">
+            <!-- Cột Trái: Item Kéo -->
+            <div class="col" id="stone-container">
+                <div class="col-title">Mục Cần Phân Loại</div>
+                <!-- Sẽ chèn tự động bằng JS -->
+            </div>
+
+            <!-- Cột Phải: Khay Thả -->
+            <div class="col" id="mineral-container">
+                <div class="col-title">Khay Tiếp Nhận</div>
+                <!-- Sẽ chèn tự động bằng JS -->
+            </div>
+        </div>
+
+        <button id="btnSubmit" class="btn-submit">Nộp bài (Chưa hoàn thành)</button>
+    </div>
+
+    <!-- MÀN HÌNH 3: KẾT QUẢ -->
+    <div id="result-screen" class="screen">
+        <div class="result-box">
+            <h2>KẾT QUẢ CỦA BẠN</h2>
+            <div class="score" id="displayScore">0/5</div>
+            <div class="time-taken" id="displayTimeTaken">Thời gian: 0s</div>
+            
+            <div class="answer-key">
+                <h4 style="margin-bottom: 10px;">Đáp án các câu vừa chơi:</h4>
+                <div id="dynamic-answer-key">
+                    <!-- Đáp án chèn tự động -->
+                </div>
+            </div>
+
+            <div id="submitStatus" class="loading-text">Đang gửi kết quả cho Giảng viên...</div>
+            <button id="btnRetry" style="margin-top: 20px; background: #666;">Chơi lại lượt mới (Đề khác)</button>
+        </div>
+    </div>
+
+    <!-- POP-UP GIẢI THÍCH (TOAST) -->
+    <div id="toast"><span class="title">✅ Chính xác!</span><span class="message"></span></div>
+
+    <script>
+        // --- CẤU HÌNH WEBHOOK GOOGLE SHEETS ---
+        const GOOGLE_SHEETS_WEBHOOK_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL";
+
+        // --- NGÂN HÀNG DỮ LIỆU (30 CÂU HỎI) ---
+        const questionBank = [
+            // Nhóm 1
+            { id: "q1", drag: "Đá Granite (Axit)", drop: "Sét trắng Kaolin (Cao lanh)", exp: "Fenspat trong đá Granite bị thủy phân mạnh mẽ tạo thành cao lanh tinh khiết." },
+            { id: "q2", drag: "Đá Bazan (Mafic)", drop: "Quặng Bauxit / Đất đỏ", exp: "Vỏ phong hóa trên đá Bazan ở Tây Nguyên rất giàu Nhôm (Al) và Sắt (Fe)." },
+            { id: "q3", drag: "Đá Siêu mafic", drop: "Quặng Niken / Crôm", exp: "Đá nghèo Silic, giàu Fe-Mg thường sinh ra quặng Niken hoặc Crôm tập trung." },
+            { id: "q4", drag: "Mạch quặng Sulfua (Pyrit)", drop: "Mũ sắt (Gossan)", exp: "Đới oxy hóa trên các mỏ sulfua tạo thành lớp kết vón oxit sắt (mũ sắt)." },
+            { id: "q5", drag: "Đá Phiến Sericite", drop: "Vỏ phong hóa giàu Hydromica", exp: "Quá trình phong hóa mang tính 'kế thừa' trực tiếp từ khoáng vật của đá mẹ." },
+            { id: "q6", drag: "Đá Sét kết", drop: "Đới Litoma (Sét) rất dày", exp: "Đá trầm tích hạt mịn khi phong hóa thường tạo ra đới sét (Litoma) dày." },
+            { id: "q7", drag: "Đá Granodiorit", drop: "Vỏ phong hóa Sialferit", exp: "Đá magma trung tính-axit thường tạo ra vỏ phong hóa giàu Si-Al-Fe." },
+            // Nhóm 2
+            { id: "q8", drag: "Khoáng vật Felspat", drop: "Gipxit Al(OH)3 / Kaolinit", exp: "Dưới tác dụng thủy phân, Felspat biến đổi thành các khoáng vật sét và hydroxit nhôm." },
+            { id: "q9", drag: "Khoáng vật Thạch anh", drop: "Trơ (Hạt thạch anh sót)", exp: "Thạch anh rất bền vững với phong hóa hóa học nên thường tồn tại ở dạng hạt sót." },
+            { id: "q10", drag: "Mica (Muscovit, Biotit)", drop: "Kaolinit", exp: "Mica bị thủy phân và mất các ion kiềm để biến thành sét Kaolinit." },
+            { id: "q11", drag: "Nhóm Silicat / Alumosilicat", drop: "Gotit FeO(OH)", exp: "Các khoáng vật chứa sắt bị oxy hóa và hydrat hóa tạo thành Gotit." },
+            { id: "q12", drag: "Khoáng vật Biotit", drop: "Quặng Vermiculit", exp: "Quá trình phong hóa đá giàu biotit Mg-Fe sinh ra mỏ khoáng sản Vermiculit." },
+            { id: "q13", drag: "Khoáng vật Olivin", drop: "Goethit / Montmorillonit", exp: "Khoáng vật nguyên sinh giàu Fe-Mg bị phong hóa tạo ra oxit sắt và sét Montmorillonit." },
+            // Nhóm 3
+            { id: "q14", drag: "Đới Vón kết (Trên cùng)", drop: "Laterit (Giàu Fe, Al)", exp: "Đới nằm trên cùng, sắt và nhôm bị tụ tập lại tạo kết vón cứng." },
+            { id: "q15", drag: "Đới Sét hóa (Ở giữa)", drop: "Đới Litoma", exp: "Đất sét hoàn toàn mất đi cấu trúc của đá mẹ ban đầu." },
+            { id: "q16", drag: "Đới phong hóa dở dang", drop: "Đới Saprolit", exp: "Đá đã bị phong hóa mềm ra nhưng vẫn còn giữ nguyên kiến trúc của đá gốc." },
+            { id: "q17", drag: "Đất đá giữ nguyên kiến trúc gốc", drop: "Đặc trưng đới Saprolit", exp: "Mẫu lấy trong đới saprolit vẫn còn giữ kiến trúc đá mẹ." },
+            { id: "q18", drag: "Đất đá mất cấu trúc gốc", drop: "Đặc trưng đới Litoma", exp: "Mẫu trong đới Litoma không còn cấu trúc đá mẹ, chủ yếu là sét." },
+            // Nhóm 4
+            { id: "q19", drag: "VPH giàu Silica (Si) & Nhôm", drop: "Kiểu Sialit", exp: "Thường gặp ở vỏ phong hóa trên đá Granite, sinh ra nhiều cao lanh." },
+            { id: "q20", drag: "VPH giàu Nhôm (Al) hơn Sắt", drop: "Kiểu Alferit", exp: "Điều kiện lý tưởng để hình thành các mỏ quặng Bauxit chất lượng cao." },
+            { id: "q21", drag: "VPH giàu Sắt (Fe) & Nhôm", drop: "Kiểu Feralit", exp: "Rất phổ biến ở Việt Nam, đặc trưng bởi đất đỏ vàng nhiệt đới." },
+            { id: "q22", drag: "Phong hóa nghèo oxy, thoát nước kém", drop: "Sinh ra sét Montmorillonit", exp: "Các ion kiềm, kiềm thổ không bị rửa trôi hết, đọng lại tạo Montmorillonit." },
+            // Nhóm 5
+            { id: "q23", drag: "Nước + CO2 + Nhiệt độ cao", drop: "Phong hóa Hóa học", exp: "Khí hậu nhiệt đới ẩm là điều kiện tốt nhất cho phong hóa hóa học phát triển." },
+            { id: "q24", drag: "Thay đổi nhiệt độ đột ngột", drop: "Phong hóa Vật lý", exp: "Đá bị nứt vỡ do giãn nở nhiệt, không thay đổi thành phần hóa học." },
+            { id: "q25", drag: "Rễ cây tiết ra axit hữu cơ", drop: "Phong hóa Sinh học", exp: "Sinh vật rễ cây tiết dịch phá hủy đá gốc tạo mùn đất." },
+            { id: "q26", drag: "Cơ chế Thủy phân", drop: "Phá vỡ cấu trúc Silicat", exp: "Nước phân ly ion H+ thay thế ion kim loại trong mạng tinh thể khoáng vật." },
+            { id: "q27", drag: "Cơ chế Oxy hóa", drop: "Sắt (II) biến thành Sắt (III)", exp: "Làm đá gốc chuyển sang các màu đỏ, nâu đỏ đặc trưng của hematit/goethit." },
+            // Nhóm 6
+            { id: "q28", drag: "Địa hình dốc lớn (>35 độ)", drop: "Vỏ phong hóa rất mỏng / Rửa trôi", exp: "Nước chảy xiết cuốn trôi sản phẩm phong hóa, không tạo được vỏ dày." },
+            { id: "q29", drag: "Địa hình bằng phẳng", drop: "Vỏ phong hóa bảo tồn dày", exp: "Các bề mặt san bằng giúp tích tụ vỏ phong hóa dày tới chục mét." },
+            { id: "q30", drag: "Hệ số kiềm RẤT THẤP", drop: "Đá dễ bị phong hóa thủy phân", exp: "Đá càng ít liên kết kiềm chặt chẽ càng dễ bị phá hủy trong môi trường nhiệt đới ẩm." }
+        ];
+
+        // --- TRẠNG THÁI GAME ---
+        const ITEMS_PER_GAME = 5; // Bốc 5 câu mỗi lượt
+        const MAX_TIME = 120; // 120 giây
+        
+        let player = { name: '', id: '' };
+        let timeLeft = MAX_TIME;
+        let timerInterval;
+        let timeTaken = 0;
+        let currentQuestions = [];
+        let score = 0; // Đếm số câu đúng tức thời
+        let attemptCount = 0; // Thêm biến đếm số lượt chơi
+
+        // --- DOM ELEMENTS ---
+        const screens = {
+            login: document.getElementById('login-screen'),
+            game: document.getElementById('game-screen'),
+            result: document.getElementById('result-screen')
+        };
+        const stoneContainer = document.getElementById('stone-container');
+        const mineralContainer = document.getElementById('mineral-container');
+
+        // --- HÀM TOAST (POP-UP GIẢI THÍCH) ---
+        let toastTimeout;
+        function showToast(isSuccess, text) {
+            const toast = document.getElementById('toast');
+            const title = toast.querySelector('.title');
+            const msg = toast.querySelector('.message');
+            
+            clearTimeout(toastTimeout);
+            
+            if (isSuccess) {
+                title.innerText = "✅ Chính xác!";
+                title.style.color = "var(--success-color)";
+            } else {
+                title.innerText = "❌ Sai rồi!";
+                title.style.color = "#ff5252";
+            }
+            
+            msg.innerText = " " + text;
+            toast.classList.add('show');
+            
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000); // Hiện 5 giây để đọc giải thích
+        }
+
+        // --- LOGIC CHUYỂN MÀN HÌNH ---
+        function showScreen(screenName) {
+            Object.values(screens).forEach(s => s.classList.remove('active'));
+            screens[screenName].classList.add('active');
+        }
+
+        // --- KHỞI TẠO GAME ---
+        document.getElementById('btnStart').addEventListener('click', () => {
+            const nameInput = document.getElementById('studentName').value.trim();
+            const idInput = document.getElementById('studentId').value.trim();
+
+            if (!nameInput || !idInput) {
+                alert("Vui lòng nhập đầy đủ Họ Tên và Mã số Sinh viên!");
+                return;
+            }
+
+            player.name = nameInput;
+            player.id = idInput;
+            attemptCount = 1; // Khởi tạo lượt chơi đầu tiên
+            document.getElementById('displayPlayerInfo').innerText = `${player.name} - ${player.id} (Lượt ${attemptCount})`;
+            
+            initGame();
+            showScreen('game');
+            startTimer();
+        });
+
+        function initGame() {
+            score = 0;
+            document.getElementById('btnSubmit').innerText = `Nộp bài (Chưa hoàn thành)`;
+            
+            // Xóa nội dung cũ
+            stoneContainer.innerHTML = '<div class="col-title">Mục Cần Phân Loại</div>';
+            mineralContainer.innerHTML = '<div class="col-title">Khay Tiếp Nhận</div>';
+
+            // 1. Random bốc 5 câu từ ngân hàng
+            const shuffledBank = [...questionBank].sort(() => 0.5 - Math.random());
+            currentQuestions = shuffledBank.slice(0, ITEMS_PER_GAME);
+
+            // 2. Tạo khay đích (Trộn thứ tự)
+            const dropZonesData = [...currentQuestions].sort(() => 0.5 - Math.random());
+            dropZonesData.forEach(q => {
+                const zone = document.createElement('div');
+                zone.classList.add('mineral-zone');
+                zone.dataset.accept = q.id;
+                zone.innerHTML = `<div class="mineral-label">${q.drop}</div>`;
+                mineralContainer.appendChild(zone);
+            });
+
+            // 3. Tạo thẻ kéo (Trộn thứ tự)
+            const dragItemsData = [...currentQuestions].sort(() => 0.5 - Math.random());
+            dragItemsData.forEach(q => {
+                const el = document.createElement('div');
+                el.classList.add('stone');
+                el.dataset.id = q.id;
+                el.dataset.exp = q.exp;
+                el.innerText = q.drag;
+                
+                setupDraggable(el);
+                stoneContainer.appendChild(el);
+            });
+            
+            // 4. Lưu đáp án vào màn hình cuối để review
+            const answerHTML = currentQuestions.map(q => 
+                `<div class="answer-item">
+                    <span><b>${q.drag}</b></span> ➔ 
+                    <span>${q.drop}</span>
+                </div>`
+            ).join('');
+            document.getElementById('dynamic-answer-key').innerHTML = answerHTML;
+        }
+
+        // --- HỆ THỐNG KÉO THẢ (HỖ TRỢ TOUCH & MOUSE) ---
+        let activeDragElement = null;
+        let initialX, initialY, currentX, currentY;
+        let originalParent = null;
+
+        function setupDraggable(el) {
+            el.addEventListener('pointerdown', dragStart);
+            el.addEventListener('touchstart', (e) => e.preventDefault(), {passive: false}); 
+        }
+
+        function dragStart(e) {
+            if (e.button !== 0 && e.pointerType === 'mouse') return;
+            
+            activeDragElement = e.target;
+            originalParent = activeDragElement.parentNode;
+
+            const rect = activeDragElement.getBoundingClientRect();
+            initialX = e.clientX - rect.left;
+            initialY = e.clientY - rect.top;
+
+            activeDragElement.style.position = 'fixed';
+            activeDragElement.style.width = `${rect.width}px`;
+            activeDragElement.classList.add('dragging');
+            
+            activeDragElement.style.left = `${e.clientX - initialX}px`;
+            activeDragElement.style.top = `${e.clientY - initialY}px`;
+            
+            document.body.appendChild(activeDragElement);
+
+            document.addEventListener('pointermove', dragMove);
+            document.addEventListener('pointerup', dragEnd);
+        }
+
+        function dragMove(e) {
+            if (!activeDragElement) return;
+            e.preventDefault();
+
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
+
+            activeDragElement.style.left = `${currentX}px`;
+            activeDragElement.style.top = `${currentY}px`;
+
+            activeDragElement.style.pointerEvents = 'none';
+            let elemBelow = document.elementFromPoint(e.clientX, e.clientY);
+            activeDragElement.style.pointerEvents = 'auto';
+
+            document.querySelectorAll('.mineral-zone').forEach(z => z.classList.remove('drag-over'));
+            
+            if (elemBelow) {
+                let dropZone = elemBelow.closest('.mineral-zone');
+                if (dropZone && !dropZone.querySelector('.stone')) {
+                    dropZone.classList.add('drag-over');
+                }
+            }
+        }
+
+        function dragEnd(e) {
+            if (!activeDragElement) return;
+
+            document.removeEventListener('pointermove', dragMove);
+            document.removeEventListener('pointerup', dragEnd);
+
+            activeDragElement.style.pointerEvents = 'none';
+            let elemBelow = document.elementFromPoint(e.clientX, e.clientY);
+            activeDragElement.style.pointerEvents = 'auto';
+
+            let dropZone = elemBelow ? elemBelow.closest('.mineral-zone') : null;
+
+            document.querySelectorAll('.mineral-zone').forEach(z => z.classList.remove('drag-over'));
+
+            // Reset style thẻ kéo
+            activeDragElement.style.position = 'relative';
+            activeDragElement.style.left = '0';
+            activeDragElement.style.top = '0';
+            activeDragElement.style.width = '100%';
+            activeDragElement.classList.remove('dragging');
+
+            // XỬ LÝ KIỂM TRA ĐÚNG SAI NGAY LẬP TỨC
+            if (dropZone) {
+                const targetId = dropZone.dataset.accept;
+                const stoneId = activeDragElement.dataset.id;
+                const explanation = activeDragElement.dataset.exp;
+
+                if (targetId === stoneId) {
+                    // ĐÚNG
+                    dropZone.appendChild(activeDragElement);
+                    dropZone.classList.add('success-flash');
+                    
+                    // Ẩn text bên dưới khi thả đúng (hỗ trợ thêm cho trình duyệt cũ)
+                    const label = dropZone.querySelector('.mineral-label');
+                    if (label) label.style.display = 'none';
+                    
+                    // Khóa không cho kéo nữa
+                    activeDragElement.removeEventListener('pointerdown', dragStart);
+                    activeDragElement.style.cursor = 'default';
+                    activeDragElement.style.border = 'none';
+                    activeDragElement.style.backgroundColor = 'transparent';
+                    
+                    showToast(true, explanation);
+                    score++;
+                    
+                    // Tự động kết thúc nếu hoàn thành hết
+                    if (score === ITEMS_PER_GAME) {
+                        setTimeout(() => submitGame(), 1500); // Delay chút để đọc giải thích cuối
+                    }
+                } else {
+                    // SAI - Lắc và trả về
+                    dropZone.classList.add('shake');
+                    setTimeout(() => dropZone.classList.remove('shake'), 400);
+                    showToast(false, "Mục này không khớp với khay. Hãy thử lại!");
+                    originalParent.appendChild(activeDragElement);
+                }
+            } else {
+                originalParent.appendChild(activeDragElement);
+            }
+
+            activeDragElement = null;
+        }
+
+        // --- LOGIC ĐẾM GIỜ & CHẤM ĐIỂM ---
+        function startTimer() {
+            timeLeft = MAX_TIME;
+            document.getElementById('displayTimer').innerText = `${timeLeft}s`;
+            clearInterval(timerInterval);
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('displayTimer').innerText = `${timeLeft}s`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    submitGame(); 
+                }
+            }, 1000);
+        }
+
+        document.getElementById('btnSubmit').addEventListener('click', () => {
+            if(confirm("Bạn chưa xếp xong. Vẫn muốn nộp bài lấy điểm hiện tại?")) {
+                submitGame();
+            }
+        });
+
+        function submitGame() {
+            clearInterval(timerInterval);
+            timeTaken = MAX_TIME - timeLeft;
+
+            document.getElementById('displayScore').innerText = `${score}/${ITEMS_PER_GAME}`;
+            document.getElementById('displayTimeTaken').innerText = `Thời gian hoàn thành: ${timeTaken} giây`;
+            showScreen('result');
+
+            // Ẩn toast nếu đang hiện
+            document.getElementById('toast').classList.remove('show');
+
+            sendDataToGoogleSheets(score, timeTaken);
+        }
+
+        // --- API GỬI DỮ LIỆU ---
+        function sendDataToGoogleSheets(finalScore, time) {
+            const statusText = document.getElementById('submitStatus');
+            statusText.innerText = "Đang đồng bộ điểm về máy chủ...";
+            statusText.style.color = "var(--mineral-color)";
+
+            if (!GOOGLE_SHEETS_WEBHOOK_URL.startsWith('http')) {
+                console.warn("Google Sheets Webhook URL chưa được cấu hình. Bỏ qua đồng bộ.");
+                statusText.innerText = "Lưu nội bộ thành công. (Chưa cấu hình Google Sheets)";
+                statusText.style.color = "#888";
+                return;
+            }
+
+            const data = {
+                "action": "save_game_diachat", // Gắn nhãn để Apps Script phân luồng xử lý
+                "Họ tên": player.name,
+                "MSSV": player.id,
+                "Lượt chơi": attemptCount,
+                "Điểm": finalScore,
+                "Thời gian": time
+            };
+
+            fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(() => {
+                statusText.innerText = "Đã gửi kết quả cho Giảng viên thành công!";
+                statusText.style.color = "var(--success-color)";
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusText.innerText = "Lưu nội bộ thành công. (Chưa kết nối Google Sheets)";
+                statusText.style.color = "#888";
+            });
+        }
+
+        // --- NÚT CHƠI LẠI ---
+        document.getElementById('btnRetry').addEventListener('click', () => {
+            attemptCount++; // Tăng số lượt chơi lên 1
+            document.getElementById('displayPlayerInfo').innerText = `${player.name} - ${player.id} (Lượt ${attemptCount})`;
+            initGame(); // Bỏ qua màn hình đăng nhập, vào thẳng game
+            showScreen('game');
+            startTimer();
+        });
+
+    </script>
+</body>
+</html>
