@@ -251,7 +251,7 @@
             position: fixed;
             z-index: 2000;
             left: 50%;
-            top: 20px; /* Hiển thị phía trên */
+            top: 20px;
             transform: translateX(-50%);
             font-size: 14px;
             line-height: 1.4;
@@ -310,6 +310,7 @@
             font-size: 18px;
             color: #666;
             margin-bottom: 15px;
+            font-weight: bold;
         }
 
         .answer-key {
@@ -371,13 +372,11 @@
             <!-- Cột Trái: Item Kéo -->
             <div class="col" id="stone-container">
                 <div class="col-title">Mục Cần Phân Loại</div>
-                <!-- Sẽ chèn tự động bằng JS -->
             </div>
 
             <!-- Cột Phải: Khay Thả -->
             <div class="col" id="mineral-container">
                 <div class="col-title">Khay Tiếp Nhận</div>
-                <!-- Sẽ chèn tự động bằng JS -->
             </div>
         </div>
 
@@ -388,13 +387,18 @@
     <div id="result-screen" class="screen">
         <div class="result-box">
             <h2>KẾT QUẢ CỦA BẠN</h2>
+            
+            <!-- Vùng hiển thị rõ Tên và MSSV -->
+            <div id="resultPlayerInfo" style="font-size: 16px; color: var(--stone-color); margin-top: 10px; font-weight: bold; background: #eee; padding: 10px; border-radius: 8px;">
+                SV: ...
+            </div>
+
             <div class="score" id="displayScore">0/5</div>
             <div class="time-taken" id="displayTimeTaken">Thời gian: 0s</div>
             
             <div class="answer-key">
                 <h4 style="margin-bottom: 10px;">Đáp án các câu vừa chơi:</h4>
                 <div id="dynamic-answer-key">
-                    <!-- Đáp án chèn tự động -->
                 </div>
             </div>
 
@@ -408,11 +412,10 @@
 
     <script>
         // --- CẤU HÌNH WEBHOOK GOOGLE SHEETS ---
-        const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyEP_kko3wt2-XAhmTEQXHoRbUYNRDUOo8CiU9O7_lVTpwxm4mSj047da2O_N2aYs8Bog/exec";
+        const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwrdd9RXoRCEKBmfjinPBDWlMxlO1jgTquvY_LX4uNTkGsANJdaYATxPOHDSZu4ifiqjA/exec";
 
         // --- NGÂN HÀNG DỮ LIỆU (30 CÂU HỎI) ---
         const questionBank = [
-            // Nhóm 1
             { id: "q1", drag: "Đá Granite (Axit)", drop: "Sét trắng Kaolin (Cao lanh)", exp: "Fenspat trong đá Granite bị thủy phân mạnh mẽ tạo thành cao lanh tinh khiết." },
             { id: "q2", drag: "Đá Bazan (Mafic)", drop: "Quặng Bauxit / Đất đỏ", exp: "Vỏ phong hóa trên đá Bazan ở Tây Nguyên rất giàu Nhôm (Al) và Sắt (Fe)." },
             { id: "q3", drag: "Đá Siêu mafic", drop: "Quặng Niken / Crôm", exp: "Đá nghèo Silic, giàu Fe-Mg thường sinh ra quặng Niken hoặc Crôm tập trung." },
@@ -420,47 +423,42 @@
             { id: "q5", drag: "Đá Phiến Sericite", drop: "Vỏ phong hóa giàu Hydromica", exp: "Quá trình phong hóa mang tính 'kế thừa' trực tiếp từ khoáng vật của đá mẹ." },
             { id: "q6", drag: "Đá Sét kết", drop: "Đới Litoma (Sét) rất dày", exp: "Đá trầm tích hạt mịn khi phong hóa thường tạo ra đới sét (Litoma) dày." },
             { id: "q7", drag: "Đá Granodiorit", drop: "Vỏ phong hóa Sialferit", exp: "Đá magma trung tính-axit thường tạo ra vỏ phong hóa giàu Si-Al-Fe." },
-            // Nhóm 2
             { id: "q8", drag: "Khoáng vật Felspat", drop: "Gipxit Al(OH)3 / Kaolinit", exp: "Dưới tác dụng thủy phân, Felspat biến đổi thành các khoáng vật sét và hydroxit nhôm." },
             { id: "q9", drag: "Khoáng vật Thạch anh", drop: "Trơ (Hạt thạch anh sót)", exp: "Thạch anh rất bền vững với phong hóa hóa học nên thường tồn tại ở dạng hạt sót." },
             { id: "q10", drag: "Mica (Muscovit, Biotit)", drop: "Kaolinit", exp: "Mica bị thủy phân và mất các ion kiềm để biến thành sét Kaolinit." },
             { id: "q11", drag: "Nhóm Silicat / Alumosilicat", drop: "Gotit FeO(OH)", exp: "Các khoáng vật chứa sắt bị oxy hóa và hydrat hóa tạo thành Gotit." },
             { id: "q12", drag: "Khoáng vật Biotit", drop: "Quặng Vermiculit", exp: "Quá trình phong hóa đá giàu biotit Mg-Fe sinh ra mỏ khoáng sản Vermiculit." },
             { id: "q13", drag: "Khoáng vật Olivin", drop: "Goethit / Montmorillonit", exp: "Khoáng vật nguyên sinh giàu Fe-Mg bị phong hóa tạo ra oxit sắt và sét Montmorillonit." },
-            // Nhóm 3
             { id: "q14", drag: "Đới Vón kết (Trên cùng)", drop: "Laterit (Giàu Fe, Al)", exp: "Đới nằm trên cùng, sắt và nhôm bị tụ tập lại tạo kết vón cứng." },
             { id: "q15", drag: "Đới Sét hóa (Ở giữa)", drop: "Đới Litoma", exp: "Đất sét hoàn toàn mất đi cấu trúc của đá mẹ ban đầu." },
             { id: "q16", drag: "Đới phong hóa dở dang", drop: "Đới Saprolit", exp: "Đá đã bị phong hóa mềm ra nhưng vẫn còn giữ nguyên kiến trúc của đá gốc." },
             { id: "q17", drag: "Đất đá giữ nguyên kiến trúc gốc", drop: "Đặc trưng đới Saprolit", exp: "Mẫu lấy trong đới saprolit vẫn còn giữ kiến trúc đá mẹ." },
             { id: "q18", drag: "Đất đá mất cấu trúc gốc", drop: "Đặc trưng đới Litoma", exp: "Mẫu trong đới Litoma không còn cấu trúc đá mẹ, chủ yếu là sét." },
-            // Nhóm 4
             { id: "q19", drag: "VPH giàu Silica (Si) & Nhôm", drop: "Kiểu Sialit", exp: "Thường gặp ở vỏ phong hóa trên đá Granite, sinh ra nhiều cao lanh." },
             { id: "q20", drag: "VPH giàu Nhôm (Al) hơn Sắt", drop: "Kiểu Alferit", exp: "Điều kiện lý tưởng để hình thành các mỏ quặng Bauxit chất lượng cao." },
             { id: "q21", drag: "VPH giàu Sắt (Fe) & Nhôm", drop: "Kiểu Feralit", exp: "Rất phổ biến ở Việt Nam, đặc trưng bởi đất đỏ vàng nhiệt đới." },
             { id: "q22", drag: "Phong hóa nghèo oxy, thoát nước kém", drop: "Sinh ra sét Montmorillonit", exp: "Các ion kiềm, kiềm thổ không bị rửa trôi hết, đọng lại tạo Montmorillonit." },
-            // Nhóm 5
             { id: "q23", drag: "Nước + CO2 + Nhiệt độ cao", drop: "Phong hóa Hóa học", exp: "Khí hậu nhiệt đới ẩm là điều kiện tốt nhất cho phong hóa hóa học phát triển." },
             { id: "q24", drag: "Thay đổi nhiệt độ đột ngột", drop: "Phong hóa Vật lý", exp: "Đá bị nứt vỡ do giãn nở nhiệt, không thay đổi thành phần hóa học." },
             { id: "q25", drag: "Rễ cây tiết ra axit hữu cơ", drop: "Phong hóa Sinh học", exp: "Sinh vật rễ cây tiết dịch phá hủy đá gốc tạo mùn đất." },
             { id: "q26", drag: "Cơ chế Thủy phân", drop: "Phá vỡ cấu trúc Silicat", exp: "Nước phân ly ion H+ thay thế ion kim loại trong mạng tinh thể khoáng vật." },
             { id: "q27", drag: "Cơ chế Oxy hóa", drop: "Sắt (II) biến thành Sắt (III)", exp: "Làm đá gốc chuyển sang các màu đỏ, nâu đỏ đặc trưng của hematit/goethit." },
-            // Nhóm 6
             { id: "q28", drag: "Địa hình dốc lớn (>35 độ)", drop: "Vỏ phong hóa rất mỏng / Rửa trôi", exp: "Nước chảy xiết cuốn trôi sản phẩm phong hóa, không tạo được vỏ dày." },
             { id: "q29", drag: "Địa hình bằng phẳng", drop: "Vỏ phong hóa bảo tồn dày", exp: "Các bề mặt san bằng giúp tích tụ vỏ phong hóa dày tới chục mét." },
             { id: "q30", drag: "Hệ số kiềm RẤT THẤP", drop: "Đá dễ bị phong hóa thủy phân", exp: "Đá càng ít liên kết kiềm chặt chẽ càng dễ bị phá hủy trong môi trường nhiệt đới ẩm." }
         ];
 
         // --- TRẠNG THÁI GAME ---
-        const ITEMS_PER_GAME = 5; // Bốc 5 câu mỗi lượt
-        const MAX_TIME = 120; // 120 giây
+        const ITEMS_PER_GAME = 5; 
+        const MAX_TIME = 120; 
         
         let player = { name: '', id: '' };
         let timeLeft = MAX_TIME;
         let timerInterval;
         let timeTaken = 0;
         let currentQuestions = [];
-        let score = 0; // Đếm số câu đúng tức thời
-        let attemptCount = 0; // Thêm biến đếm số lượt chơi
+        let score = 0; 
+        let attemptCount = 0; 
 
         // --- DOM ELEMENTS ---
         const screens = {
@@ -493,10 +491,9 @@
             
             toastTimeout = setTimeout(() => {
                 toast.classList.remove('show');
-            }, 5000); // Hiện 5 giây để đọc giải thích
+            }, 5000);
         }
 
-        // --- LOGIC CHUYỂN MÀN HÌNH ---
         function showScreen(screenName) {
             Object.values(screens).forEach(s => s.classList.remove('active'));
             screens[screenName].classList.add('active');
@@ -514,7 +511,7 @@
 
             player.name = nameInput;
             player.id = idInput;
-            attemptCount = 1; // Khởi tạo lượt chơi đầu tiên
+            attemptCount = 1; 
             document.getElementById('displayPlayerInfo').innerText = `${player.name} - ${player.id} (Lượt ${attemptCount})`;
             
             initGame();
@@ -526,15 +523,12 @@
             score = 0;
             document.getElementById('btnSubmit').innerText = `Nộp bài (Chưa hoàn thành)`;
             
-            // Xóa nội dung cũ
             stoneContainer.innerHTML = '<div class="col-title">Mục Cần Phân Loại</div>';
             mineralContainer.innerHTML = '<div class="col-title">Khay Tiếp Nhận</div>';
 
-            // 1. Random bốc 5 câu từ ngân hàng
             const shuffledBank = [...questionBank].sort(() => 0.5 - Math.random());
             currentQuestions = shuffledBank.slice(0, ITEMS_PER_GAME);
 
-            // 2. Tạo khay đích (Trộn thứ tự)
             const dropZonesData = [...currentQuestions].sort(() => 0.5 - Math.random());
             dropZonesData.forEach(q => {
                 const zone = document.createElement('div');
@@ -544,7 +538,6 @@
                 mineralContainer.appendChild(zone);
             });
 
-            // 3. Tạo thẻ kéo (Trộn thứ tự)
             const dragItemsData = [...currentQuestions].sort(() => 0.5 - Math.random());
             dragItemsData.forEach(q => {
                 const el = document.createElement('div');
@@ -557,7 +550,6 @@
                 stoneContainer.appendChild(el);
             });
             
-            // 4. Lưu đáp án vào màn hình cuối để review
             const answerHTML = currentQuestions.map(q => 
                 `<div class="answer-item">
                     <span><b>${q.drag}</b></span> ➔ 
@@ -567,7 +559,7 @@
             document.getElementById('dynamic-answer-key').innerHTML = answerHTML;
         }
 
-        // --- HỆ THỐNG KÉO THẢ (HỖ TRỢ TOUCH & MOUSE) ---
+        // --- HỆ THỐNG KÉO THẢ ---
         let activeDragElement = null;
         let initialX, initialY, currentX, currentY;
         let originalParent = null;
@@ -638,29 +630,24 @@
 
             document.querySelectorAll('.mineral-zone').forEach(z => z.classList.remove('drag-over'));
 
-            // Reset style thẻ kéo
             activeDragElement.style.position = 'relative';
             activeDragElement.style.left = '0';
             activeDragElement.style.top = '0';
             activeDragElement.style.width = '100%';
             activeDragElement.classList.remove('dragging');
 
-            // XỬ LÝ KIỂM TRA ĐÚNG SAI NGAY LẬP TỨC
             if (dropZone) {
                 const targetId = dropZone.dataset.accept;
                 const stoneId = activeDragElement.dataset.id;
                 const explanation = activeDragElement.dataset.exp;
 
                 if (targetId === stoneId) {
-                    // ĐÚNG
                     dropZone.appendChild(activeDragElement);
                     dropZone.classList.add('success-flash');
                     
-                    // Ẩn text bên dưới khi thả đúng (hỗ trợ thêm cho trình duyệt cũ)
                     const label = dropZone.querySelector('.mineral-label');
                     if (label) label.style.display = 'none';
                     
-                    // Khóa không cho kéo nữa
                     activeDragElement.removeEventListener('pointerdown', dragStart);
                     activeDragElement.style.cursor = 'default';
                     activeDragElement.style.border = 'none';
@@ -669,12 +656,10 @@
                     showToast(true, explanation);
                     score++;
                     
-                    // Tự động kết thúc nếu hoàn thành hết
                     if (score === ITEMS_PER_GAME) {
-                        setTimeout(() => submitGame(), 1500); // Delay chút để đọc giải thích cuối
+                        setTimeout(() => submitGame(), 1500); 
                     }
                 } else {
-                    // SAI - Lắc và trả về
                     dropZone.classList.add('shake');
                     setTimeout(() => dropZone.classList.remove('shake'), 400);
                     showToast(false, "Mục này không khớp với khay. Hãy thử lại!");
@@ -714,11 +699,13 @@
             clearInterval(timerInterval);
             timeTaken = MAX_TIME - timeLeft;
 
+            // Đưa thẳng Họ Tên, MSSV ra màn hình kết quả
+            document.getElementById('resultPlayerInfo').innerText = `Sinh viên: ${player.name} - MSSV: ${player.id} (Lượt ${attemptCount})`;
             document.getElementById('displayScore').innerText = `${score}/${ITEMS_PER_GAME}`;
             document.getElementById('displayTimeTaken').innerText = `Thời gian hoàn thành: ${timeTaken} giây`;
+            
             showScreen('result');
 
-            // Ẩn toast nếu đang hiện
             document.getElementById('toast').classList.remove('show');
 
             sendDataToGoogleSheets(score, timeTaken);
@@ -737,8 +724,9 @@
                 return;
             }
 
+            // Dữ liệu JSON gửi đi vẫn giữ nguyên key để khớp với Case 7
             const data = {
-                "action": "save_game_diachat", // Gắn nhãn để Apps Script phân luồng xử lý
+                "action": "save_game_diachat", 
                 "Họ tên": player.name,
                 "MSSV": player.id,
                 "Lượt chơi": attemptCount,
@@ -767,9 +755,9 @@
 
         // --- NÚT CHƠI LẠI ---
         document.getElementById('btnRetry').addEventListener('click', () => {
-            attemptCount++; // Tăng số lượt chơi lên 1
+            attemptCount++; 
             document.getElementById('displayPlayerInfo').innerText = `${player.name} - ${player.id} (Lượt ${attemptCount})`;
-            initGame(); // Bỏ qua màn hình đăng nhập, vào thẳng game
+            initGame(); 
             showScreen('game');
             startTimer();
         });
