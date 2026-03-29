@@ -724,7 +724,7 @@
                 return;
             }
 
-            // Dữ liệu JSON gửi đi vẫn giữ nguyên key để khớp với Case 7
+            // Dữ liệu JSON gửi đi
             const data = {
                 "action": "save_game_diachat", 
                 "Họ tên": player.name,
@@ -734,17 +734,23 @@
                 "Thời gian": time
             };
 
+            // Đã đổi sang text/plain và bỏ mode: 'no-cors' để Apps Script không bị lỗi bảo mật
             fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
                 method: 'POST',
-                mode: 'no-cors',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'text/plain;charset=utf-8',
                 },
                 body: JSON.stringify(data)
             })
-            .then(() => {
-                statusText.innerText = "Đã gửi kết quả cho Giảng viên thành công!";
-                statusText.style.color = "var(--success-color)";
+            .then(response => response.json())
+            .then(result => {
+                if(result.result === "success") {
+                    statusText.innerText = "Đã gửi kết quả cho Giảng viên thành công!";
+                    statusText.style.color = "var(--success-color)";
+                } else {
+                    statusText.innerText = "Lỗi từ máy chủ: " + (result.error || "Không xác định");
+                    statusText.style.color = "var(--error-color)";
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
